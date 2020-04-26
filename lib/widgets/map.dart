@@ -39,17 +39,83 @@ class _MapState extends State<Map> {
               onCameraMove: onCameraMove,
             ),
 
-            Positioned(
-              top: 80,
-              right: 20,
-              child: FloatingActionButton(
-                onPressed: _onAddMarkerPressed,
-                tooltip: 'add marker',
-                backgroundColor: darkBlue,
-                child: Icon(Icons.add_location, color: white,),
+            new Positioned(
+              top: 50.0,
+              right: 15.0,
+              left: 15.0,
+              child: new Container(
+                height: 50.0,
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(4.0),
+                  color: white,
+                  boxShadow: [
+                    BoxShadow(
+                      offset: Offset(1.0, 5.0),
+                      color: grey,
+                      blurRadius: 10.0,
+                      spreadRadius: 3
+                    ),
+                  ]
+                ),
+                
+                child: TextField(
+                  cursorColor: darkBlue,
+                  // controller: ,
+                  decoration: InputDecoration(
+                    hintText: 'Pick up',
+                    border: InputBorder.none,
+                    contentPadding: EdgeInsets.only(left: 15.0, top: 15.0),
+                    prefixIcon: Icon(Icons.location_on, color: darkBlue,)
+                  ),
+                ),
+              ),
+            ),
 
+            new Positioned(
+              top: 105.0,
+              right: 15.0,
+              left: 15.0,
+              child: new Container(
+                height: 50.0,
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(4.0),
+                  color: white,
+                  boxShadow: [
+                    BoxShadow(
+                      offset: Offset(1.0, 5.0),
+                      color: grey,
+                      blurRadius: 10.0,
+                      spreadRadius: 3
+                    ),
+                  ]
+                ),
+                
+                child: TextField(
+                  cursorColor: darkBlue,
+                  // controller: ,
+                  decoration: InputDecoration(
+                    hintText: 'Destination',
+                    border: InputBorder.none,
+                    contentPadding: EdgeInsets.only(left: 15.0, top: 15.0),
+                    prefixIcon: Icon(Icons.local_taxi, color: darkBlue,)
+                  ),
+                ),
               ),
             )
+
+            // Positioned(
+            //   top: 80,
+            //   right: 20,
+            //   child: FloatingActionButton(
+            //     onPressed: _onAddMarkerPressed,
+            //     tooltip: 'add marker',
+            //     backgroundColor: darkBlue,
+            //     child: Icon(Icons.add_location, color: white,),
+
+            //   ),
+            // )
           ],
         )
       ),
