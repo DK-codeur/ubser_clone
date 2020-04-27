@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:uber_clone/shared/colors.dart';
+import '../resquests/google_maps_services.dart';
+import '../shared/colors.dart';
 
 class Map extends StatefulWidget {
   Map({Key key}) : super(key: key);
@@ -11,20 +13,39 @@ class Map extends StatefulWidget {
 
 class _MapState extends State<Map> {
 
-  GoogleMapController mapController;
-  static const _initialPosition = LatLng(5.359952, -4.008256);
+  static LatLng _initialPosition ;
   LatLng _lastPosition = _initialPosition;
 
+  TextEditingController locationController = TextEditingController();
+  TextEditingController destinationController = TextEditingController();
+
+  GoogleMapController mapController;
+  GoogleMapsServices _googleMapsService = GoogleMapsServices();
+
   //set marker on map
-  final Set<Marker> _markers = {
-    
-  };
+  final Set<Marker> _markers = {};
+
+  final Set<Polyline> _polylines = {};
+
+  @override
+  void initState() {
+    _getUserLocation();
+
+    super.initState();
+  }
 
   @override
   Widget build(BuildContext context) {
     return Container(
       child: Center(
-        child: Stack(
+        child: (_initialPosition == null) 
+        ? Container(
+          alignment: Alignment.center,
+          child: Center(
+            child: CircularProgressIndicator(),
+          ),
+        ) 
+        : Stack(
           children: <Widget>[
             GoogleMap( //google_maps_flutter
               initialCameraPosition: CameraPosition(
@@ -37,6 +58,7 @@ class _MapState extends State<Map> {
               compassEnabled: true,
               markers: _markers,
               onCameraMove: onCameraMove,
+              polylines: _polylines,
             ),
 
             new Positioned(
@@ -61,7 +83,7 @@ class _MapState extends State<Map> {
                 
                 child: TextField(
                   cursorColor: darkBlue,
-                  // controller: ,
+                  controller: locationController,
                   decoration: InputDecoration(
                     hintText: 'Pick up',
                     border: InputBorder.none,
@@ -94,7 +116,11 @@ class _MapState extends State<Map> {
                 
                 child: TextField(
                   cursorColor: darkBlue,
-                  // controller: ,
+                  controller: destinationController,
+                  textInputAction: TextInputAction.go,
+                  onSubmitted: (value) {
+                    sendRequest(value);
+                  },
                   decoration: InputDecoration(
                     hintText: 'Destination',
                     border: InputBorder.none,
@@ -109,7 +135,7 @@ class _MapState extends State<Map> {
             //   top: 80,
             //   right: 20,
             //   child: FloatingActionButton(
-            //     onPressed: _onAddMarkerPressed,
+            //     onPressed: _addMarker,
             //     tooltip: 'add marker',
             //     backgroundColor: darkBlue,
             //     child: Icon(Icons.add_location, color: white,),
@@ -134,7 +160,7 @@ class _MapState extends State<Map> {
     });
   }
 
-  void _onAddMarkerPressed() {
+  void _addMarker(LatLng location, String adresse) {
     print('FAB pressed');
     setState(() {
       _markers.add(
@@ -142,14 +168,108 @@ class _MapState extends State<Map> {
           markerId: MarkerId(
             _lastPosition.toString()
           ),
-          position: _lastPosition,
+          position: location,
           infoWindow: InfoWindow(
-            title: 'we are here',
-            snippet: 'Good Place'
+            title: adresse,
+            snippet: 'Go here'
           ),
           icon: BitmapDescriptor.defaultMarker
         )
       );
     });
   }
+
+  void createRoute(String encodedPoly) {
+    setState(() {
+      _polylines.add(
+        Polyline(
+          polylineId: PolylineId(_lastPosition.toString()),
+          points: convertToLatLng(decodePoly(encodedPoly)),
+          width: 10,
+          color: darkBlue,
+        )
+      );
+    });
+  }
+
+
+  //user Location 
+  void _getUserLocation() async {
+    Position position = await Geolocator().getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
+    List<Placemark> placeMark = await Geolocator().placemarkFromCoordinates(position.latitude, position.longitude);
+    setState(() {
+      _initialPosition = LatLng(position.latitude, position.longitude);
+      locationController.text = placeMark[0].name;
+    });
+  }
+
+  void sendRequest(String indendedLocation) async {
+    List<Placemark> placemark = await Geolocator().placemarkFromAddress(indendedLocation);
+    double latitude = placemark[0].position.latitude;
+    double longitude = placemark[0].position.longitude;
+
+    LatLng destination = LatLng(latitude, longitude);
+
+    _addMarker(destination, indendedLocation);
+    String route = await _googleMapsService.getRouteCoordinates(_initialPosition, destination);
+    createRoute(route);
+
+  }
+
+
+  // decode polyline
+  List decodePoly(String poly) {
+    //decode string
+    var list = poly.codeUnits;
+    var lList = new List();
+    int index = 0;
+    int len = poly.length;
+    int c = 0;
+
+    //répéter jusqu'à ce que tous les attributs soient décodés
+    do {
+      var shift = 0;
+      int result = 0;
+
+      //for decoding value of one attribute
+      do {
+        c = list[index]-63;
+        result |= (c & 0x1F) << (shift*5);
+        index++;
+        shift++;
+      } while(c >= 32);
+
+      //if value is negative then bitwise not the value
+      if (result & 1==1) {
+        result =~ result;
+      }
+
+      var result1 = (result >> 1) * 0.00001;
+      lList.add(result1);
+
+    } while(index < len);
+
+    //adding to previous value as done in encoding
+    for(var i=2; i<lList.length; i++) {
+      lList[i]+= lList[i-2];
+    }
+
+    print(lList.toString());
+    return lList;
+  }
+
+  //Covert double to LatLng
+  List<LatLng> convertToLatLng(List points) {
+    List<LatLng> result = <LatLng>[];
+
+    for (var i = 0; i < points.length; i++) {
+      if (i % 2 != 0) {
+        result.add(
+          LatLng(points[i-1], points[i])
+        );
+      }
+    }
+    return result;
+  }
+
 }
