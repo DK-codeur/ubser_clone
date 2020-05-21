@@ -12,7 +12,15 @@ class GoogleMapsServices {
     http.Response response = await http.get(url);
 
     Map values = json.decode(response.body);
-    return values['routes'][0]['overview_polyline']['points'];
+    print('=======================VALUE=======================================');
+    print(values);
+    print('========================VALUE======================================');
+    print('===========================POLYLINE ========================================');
+    var rrr = values['routes'][0]['overview_polyline']['points'];
+    print(rrr);
+    print('==============================POLYLINE=====================================');
+
+    return rrr;
   }
 }
 
